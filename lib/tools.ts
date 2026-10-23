@@ -4,6 +4,7 @@ import { ApiRequestError, cartAdd, cartGet, createReturn, getBackOfficeReturns, 
 import { formatPrice } from "@/lib/format";
 import { start } from "workflow/api";
 import { returnFlow } from "./workflows/return-flow";
+import { createOrGetSandbox, SANDBOX_NAME } from "@/lib/sandbox";
 
 export const searchProducts = tool({
     description: `Search the Vercel swag store product catalog. Use this for broad lookups: when the user asks what the store sells, wants recommendations, or browses a category. Returns a short summary per product. Do NOT rely on it to answer questions about one specific item — use getProductDetails for that (searchProducts is still useful first to find the id/slug of an item the user names).`,
@@ -395,5 +396,22 @@ export const getSalesAnalytics = tool({
                 err instanceof ApiRequestError ? err.message : "Unknown error";
             return { count: 0, sales: [], error: message };
         }
+    },
+});
+
+export const bash = tool({
+    description: "Run a bash command in the sandbox environment",
+    inputSchema: z.object({
+        command: z.string().describe("The bash command to run"),
+    }),
+    execute: async ({ command }) => {
+        "use step";
+        const sandbox = await createOrGetSandbox(SANDBOX_NAME);
+        const result = await sandbox.runCommand("bash", ["-lc", command]);
+        return {
+            stdout: await result.stdout(),
+            stderr: await result.stderr(),
+            exitCode: result.exitCode,
+        };
     },
 });
