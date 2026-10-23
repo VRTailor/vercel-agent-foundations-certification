@@ -25,6 +25,7 @@ interface CartContextType {
   isPending: boolean
   openCart: () => void
   closeCart: () => void
+  refreshCart: () => void
   addToCart: (product: Product, quantity: number) => void
   removeFromCart: (productId: string) => void
   updateQuantity: (productId: string, quantity: number) => void
@@ -141,6 +142,18 @@ export function CartProvider({ children }: CartProviderProps) {
   const openCart = useCallback(() => setIsOpen(true), [])
   const closeCart = useCallback(() => setIsOpen(false), [])
 
+  // Re-sync with the server after changes made outside this provider (e.g. the agent's addToCart tool).
+  const refreshCart = useCallback(() => {
+    startTransition(async () => {
+      try {
+        const updated = await getCartAction()
+        setCart(updated)
+      } catch (err) {
+        console.error("refreshCart failed", err)
+      }
+    })
+  }, [])
+
   const addToCart = useCallback(
     (product: Product, quantity: number) => {
       startTransition(async () => {
@@ -195,6 +208,7 @@ export function CartProvider({ children }: CartProviderProps) {
         isPending,
         openCart,
         closeCart,
+        refreshCart,
         addToCart,
         removeFromCart,
         updateQuantity,
